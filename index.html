@@ -1,3 +1,448 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Pickleball Referee</title>
+<style>
+  /* ── PASTE URL CỦA BẠN VÀO ĐÂY (dòng JS bên dưới) ── */
+
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap');
+
+  :root {
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #0F6E56;
+    --amber: #EF9F27;
+    --amber-light: #FAEEDA;
+    --red: #E24B4A;
+    --red-light: #FCEBEB;
+    --bg: #F5F4EF;
+    --card: #FFFFFF;
+    --text: #1a1a18;
+    --text2: #6b6b66;
+    --text3: #a0a09a;
+    --border: rgba(0,0,0,0.09);
+    --radius: 16px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    overscroll-behavior: none;
+  }
+
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 12px 12px 24px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 4px 0;
+  }
+  .header-title {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .header-game {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    background: var(--green-light);
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── SETTINGS BAR ── */
+  .settings-bar {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+.settings-bar .break {
+  flex-basis: 100%;
+  height: 0;
+}
+  .settings-bar label {
+    font-size: 12px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+  .settings-bar select {
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    flex-shrink: 0;
+  }
+  .settings-bar .spacer { flex: 1; }
+
+  /* ── SCOREBOARD ── */
+  .scoreboard {
+    display: grid;
+    grid-template-columns: 1fr 44px 1fr;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .team-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 10px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .team-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: transparent;
+    transition: background 0.2s;
+  }
+  .team-card.serving {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(29,158,117,0.10);
+  }
+  .team-card.serving::before { background: var(--green); }
+
+  .team-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    border: none;
+    background: transparent;
+    text-align: center;
+    width: 100%;
+    outline: none;
+    cursor: text;
+    border-bottom: 1.5px solid transparent;
+    padding-bottom: 2px;
+    transition: border-color 0.2s;
+  }
+  .team-name:focus { border-bottom-color: var(--green); }
+
+  .big-score {
+    font-family: 'DM Mono', monospace;
+    font-size: 72px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -2px;
+  }
+
+  .set-history {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+    min-height: 20px;
+  }
+  .set-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--bg);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1px 7px;
+  }
+
+  .serve-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .team-card.serving .serve-dot { opacity: 1; }
+
+  .game-wins {
+    display: flex;
+    gap: 4px;
+  }
+  .win-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .win-dot.filled { background: var(--green); }
+
+  .score-btns {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .btn-score {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    font-size: 22px;
+    font-weight: 400;
+    cursor: pointer;
+    color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .btn-score:active { transform: scale(0.88); }
+  .btn-score.plus:active { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+  .btn-score.minus:active { background: var(--red-light); border-color: var(--red); color: var(--red); }
+
+  /* ── MIDDLE VS COL ── */
+  .vs-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 0;
+  }
+  .vs-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text3);
+  }
+  .vs-score {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ctrl-btn {
+    padding: 13px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text);
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .ctrl-btn:active { transform: scale(0.96); background: var(--bg); }
+  .ctrl-btn.danger { color: var(--red); border-color: rgba(226,75,74,0.25); }
+  .ctrl-btn.danger:active { background: var(--red-light); }
+  .ctrl-btn.highlight { color: var(--green-dark); border-color: rgba(29,158,117,0.3); background: var(--green-light); }
+
+  /* ── SERVE TOGGLE ── */
+  .serve-toggle-btn {
+    width: 100%;
+    padding: 11px;
+    border: 1.5px dashed rgba(29,158,117,0.4);
+    border-radius: 12px;
+    background: transparent;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--green-dark);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .serve-toggle-btn:active { background: var(--green-light); }
+
+  /* ── HISTORY ── */
+  .history-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: none;
+  }
+  .history-panel.open { display: block; }
+  .history-header {
+    padding: 10px 14px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+  }
+  .history-list {
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-item .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--bg);
+    padding: 2px 7px;
+    border-radius: 6px;
+    color: var(--text3);
+  }
+
+  /* ── SAVE STATUS ── */
+  .save-status {
+    text-align: center;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text3);
+    padding: 4px 0;
+    min-height: 22px;
+    transition: color 0.3s;
+  }
+  .save-status.saving { color: var(--amber); }
+  .save-status.saved  { color: var(--green); }
+  .save-status.error  { color: var(--red); }
+
+  /* ── WINNER BANNER ── */
+  .winner-banner {
+    display: none;
+    background: var(--green-light);
+    border: 2px solid var(--green);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+  }
+  .winner-banner.show { display: block; }
+  .winner-emoji { font-size: 36px; margin-bottom: 8px; }
+  .winner-name { font-size: 22px; font-weight: 700; color: var(--green-dark); }
+  .winner-sub { font-size: 14px; color: var(--green); margin-top: 4px; }
+
+  /* ── SHEET CONFIG ── */
+  .sheet-config {
+    background: var(--amber-light);
+    border: 1.5px solid rgba(239,159,39,0.4);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .sheet-config-title {
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  .sheet-url-input {
+    width: 100%;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    padding: 9px 12px;
+    border: 1px solid rgba(239,159,39,0.4);
+    border-radius: 8px;
+    background: white;
+    color: var(--text);
+    outline: none;
+  }
+  .sheet-url-input:focus { border-color: var(--amber); }
+  .sheet-config-hint {
+    font-size: 11px;
+    color: #BA7517;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .sheet-save-btn {
+    margin-top: 8px;
+    width: 100%;
+    padding: 10px;
+    background: var(--amber);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .sheet-save-btn:active { opacity: 0.85; }
+
+  /* ── SECTION DIVIDER ── */
+  .section-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+    text-align: center;
+    padding: 2px 0;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <span class="header-title">Pickleball Referee</span>
+    <span class="header-game" id="game-label">Game 1</span>
+  </div>
+
+  <!-- GOOGLE SHEET CONFIG -->
+  <div class="sheet-config" id="sheet-config">
+    <div class="sheet-config-title">⚙ Kết nối Google Sheets</div>
+    <input class="sheet-url-input" id="sheet-url" type="url"
+      placeholder="Dán URL Apps Script vào đây..."
+      value="">
+    <div class="sheet-config-hint">
+      Dán URL từ Google Apps Script → Deploy → Web App.<br>
+      Sau khi lưu, khung này sẽ thu gọn lại.
+    </div>
+    <button class="sheet-save-btn" onclick="saveSheetUrl()">Lưu URL và bắt đầu</button>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="settings-bar">
+<!-- TOURNAMENT CONFIG -->
 <div class="settings-bar">
 
   <!-- dòng 1 -->
@@ -19,3 +464,363 @@
   <input id="referee" placeholder="Tên..." style="width:100px">
 
 </div>
+<!-- TEAM SELECT -->
+<div class="settings-bar">
+  <label>Đội A</label>
+  <select id="teamA-select" onchange="setTeamName('a')"></select>
+
+  <label>Đội B</label>
+  <select id="teamB-select" onchange="setTeamName('b')"></select>
+</div>
+    <label>Điểm thắng</label>
+    <select id="win-score">
+      <option value="11">11</option>
+      <option value="15">15</option>
+      <option value="21">21</option>
+    </select>
+    <label>Best of</label>
+    <select id="best-of">
+      <option value="1">1 game</option>
+      <option value="3">3 games</option>
+      <option value="5">5 games</option>
+    </select>
+  </div>
+
+  <!-- WINNER BANNER -->
+  <div class="winner-banner" id="winner-banner">
+    <div class="winner-emoji">🏆</div>
+    <div class="winner-name" id="winner-name-text"></div>
+    <div class="winner-sub" id="winner-sub-text"></div>
+  </div>
+
+  <!-- SCOREBOARD -->
+  <div class="scoreboard">
+    <!-- TEAM A -->
+    <div class="team-card" id="card-a">
+      <input class="team-name" id="name-a" value="Đội A" maxlength="16">
+      <div class="big-score" id="score-a">0</div>
+      <div class="set-history" id="sets-a"></div>
+      <div class="game-wins" id="dots-a"></div>
+      <div class="serve-dot"></div>
+      <div class="score-btns">
+        <button class="btn-score minus" ontouchstart="" onclick="addPoint('a',-1)">−</button>
+        <button class="btn-score plus"  ontouchstart="" onclick="addPoint('a', 1)">+</button>
+      </div>
+    </div>
+
+    <!-- VS -->
+    <div class="vs-col">
+      <span class="vs-text">vs</span>
+      <span class="vs-score" id="game-score-display"></span>
+    </div>
+
+    <!-- TEAM B -->
+    <div class="team-card" id="card-b">
+      <input class="team-name" id="name-b" value="Đội B" maxlength="16">
+      <div class="big-score" id="score-b">0</div>
+      <div class="set-history" id="sets-b"></div>
+      <div class="game-wins" id="dots-b"></div>
+      <div class="serve-dot"></div>
+      <div class="score-btns">
+        <button class="btn-score minus" ontouchstart="" onclick="addPoint('b',-1)">−</button>
+        <button class="btn-score plus"  ontouchstart="" onclick="addPoint('b', 1)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVE TOGGLE -->
+  <button class="serve-toggle-btn" onclick="toggleServer()">
+    ⇄ Đổi lượt giao bóng
+  </button>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <button class="ctrl-btn" onclick="undoLast()">↩ Hoàn tác</button>
+    <button class="ctrl-btn highlight" onclick="newGame()">Game tiếp →</button>
+    <button class="ctrl-btn danger" onclick="resetMatch()">↺ Reset trận</button>
+    <button class="ctrl-btn" onclick="toggleHistory()">📋 Lịch sử</button>
+  </div>
+
+  <!-- SAVE STATUS -->
+  <div class="save-status" id="save-status"></div>
+
+  <!-- HISTORY -->
+  <div class="history-panel" id="history-panel">
+    <div class="history-header">Lịch sử điểm</div>
+    <div class="history-list" id="history-list">
+      <div class="history-item" style="color:var(--text3)">Chưa có điểm nào.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  CẤU HÌNH GOOGLE SHEETS
+// ══════════════════════════════════════════
+let SHEET_URL = localStorage.getItem('pickleball_sheet_url') || 'https://script.google.com/macros/s/AKfycbzCwQbqkKCrlV3wuF6O-iYHD6skaG-oR8l_YGmmZ0kk84ZosBuEcSJk6gudNjHnfwZZ/exec';
+
+function saveSheetUrl() {
+  const url = document.getElementById('sheet-url').value.trim();
+  if (!url) { alert('Vui lòng nhập URL!'); return; }
+  SHEET_URL = url;
+  localStorage.setItem('pickleball_sheet_url', url);
+  document.getElementById('sheet-config').style.display = 'none';
+  showStatus('✓ Đã lưu URL Google Sheets', 'saved');
+}
+
+// Nếu đã có URL, ẩn config panel
+if (SHEET_URL) {
+  document.getElementById('sheet-url').value = SHEET_URL;
+  document.getElementById('sheet-config').style.display = 'none';
+}
+
+// ══════════════════════════════════════════
+//  TRẠNG THÁI TRẬN ĐẤU
+// ══════════════════════════════════════════
+const matchId = 'M' + Date.now();
+
+let state = {
+  scoreA: 0, scoreB: 0,
+  gamesA: 0, gamesB: 0,
+  gameHistory: [],   // [{a:X, b:Y}]
+  server: 'a',
+  history: [],       // undo stack
+  finished: false,
+  currentGame: 1
+};
+
+// ══════════════════════════════════════════
+//  GỬI DỮ LIỆU LÊN GOOGLE SHEETS
+// ══════════════════════════════════════════
+async function saveToSheet(eventType) {
+  if (!SHEET_URL) return;
+const group = document.getElementById('group')?.value || "";
+const referee = document.getElementById('referee')?.value || "";
+const court = document.getElementById('court')?.value || "";
+if (!group || !referee) {
+  showStatus("⚠️ Chưa chọn Sân, Bảng hoặc nhập trọng tài", "error");
+  return;
+}
+  const payload = {
+    matchId,
+  timestamp: new Date().toLocaleString('vi-VN'),
+
+  court: court,
+  group: group,
+  referee: referee,
+
+  teamA: document.getElementById('name-a').value,
+  teamB: document.getElementById('name-b').value,
+
+  scoreA: state.scoreA,
+  scoreB: state.scoreB,
+  gamesA: state.gamesA,
+  gamesB: state.gamesB,
+  currentGame: state.currentGame,
+  server: state.server === 'a'
+    ? document.getElementById('name-a').value
+    : document.getElementById('name-b').value,
+
+  event: eventType,
+  winScore: getWinScore(),
+  bestOf: getBestOf()
+};
+
+  showStatus('⏳ Đang lưu...', 'saving');
+
+  try {
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    showStatus('✓ Đã lưu ' + new Date().toLocaleTimeString('vi-VN'), 'saved');
+  } catch (err) {
+    showStatus('✗ Lỗi kết nối', 'error');
+  }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('save-status');
+  el.textContent = msg;
+  el.className = 'save-status ' + (type || '');
+  if (type === 'saved') {
+    setTimeout(() => { el.textContent = ''; el.className = 'save-status'; }, 3000);
+  }
+}
+
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+function getWinScore() { return parseInt(document.getElementById('win-score').value); }
+function getBestOf()   { return parseInt(document.getElementById('best-of').value); }
+
+function renderDots(team) {
+  const wins = team === 'a' ? state.gamesA : state.gamesB;
+  const needed = Math.ceil(getBestOf() / 2);
+  const el = document.getElementById('dots-' + team);
+  el.innerHTML = '';
+  for (let i = 0; i < needed; i++) {
+    const d = document.createElement('div');
+    d.className = 'win-dot' + (i < wins ? ' filled' : '');
+    el.appendChild(d);
+  }
+}
+
+function renderSets(team) {
+  const el = document.getElementById('sets-' + team);
+  el.innerHTML = '';
+  state.gameHistory.forEach(g => {
+    const s = document.createElement('span');
+    s.className = 'set-badge';
+    s.textContent = team === 'a' ? g.a : g.b;
+    el.appendChild(s);
+  });
+}
+
+function render() {
+  document.getElementById('score-a').textContent = state.scoreA;
+  document.getElementById('score-b').textContent = state.scoreB;
+  document.getElementById('game-label').textContent = 'Game ' + state.currentGame;
+
+  // vs column: game score
+  if (state.gamesA > 0 || state.gamesB > 0) {
+    document.getElementById('game-score-display').textContent =
+      state.gamesA + '\n' + state.gamesB;
+  } else {
+    document.getElementById('game-score-display').textContent = '';
+  }
+
+  // serving highlight
+  document.getElementById('card-a').className = 'team-card' + (state.server === 'a' ? ' serving' : '');
+  document.getElementById('card-b').className = 'team-card' + (state.server === 'b' ? ' serving' : '');
+
+  renderDots('a'); renderDots('b');
+  renderSets('a'); renderSets('b');
+}
+
+// ══════════════════════════════════════════
+//  LOGIC CHẤM ĐIỂM
+// ══════════════════════════════════════════
+function checkGameWin() {
+  const win = getWinScore();
+  let winner = null;
+  if (state.scoreA >= win && state.scoreA - state.scoreB >= 2) winner = 'a';
+  if (state.scoreB >= win && state.scoreB - state.scoreA >= 2) winner = 'b';
+  if (!winner) return false;
+
+  state.gameHistory.push({ a: state.scoreA, b: state.scoreB });
+  if (winner === 'a') state.gamesA++; else state.gamesB++;
+
+  const needed = Math.ceil(getBestOf() / 2);
+  if (state.gamesA >= needed || state.gamesB >= needed) {
+    const winnerName = winner === 'a'
+      ? document.getElementById('name-a').value
+      : document.getElementById('name-b').value;
+    document.getElementById('winner-name-text').textContent = winnerName + ' thắng trận!';
+    document.getElementById('winner-sub-text').textContent =
+      state.gamesA + ' – ' + state.gamesB + ' games';
+    document.getElementById('winner-banner').classList.add('show');
+    state.finished = true;
+    saveToSheet('match_end');
+  } else {
+    saveToSheet('game_win');
+    state.scoreA = 0; state.scoreB = 0;
+    state.currentGame++;
+    state.server = winner;
+  }
+  render();
+  return true;
+}
+
+function addPoint(team, delta) {
+  if (state.finished) return;
+
+  const snap = JSON.parse(JSON.stringify(state));
+
+  if (team === 'a') state.scoreA = Math.max(0, state.scoreA + delta);
+  else              state.scoreB = Math.max(0, state.scoreB + delta);
+
+  if (delta > 0) {
+    const name = team === 'a'
+      ? document.getElementById('name-a').value
+      : document.getElementById('name-b').value;
+    state.history.push({
+      snap,
+      label: name + ' ghi điểm',
+      score: state.scoreA + '–' + state.scoreB
+    });
+    if (!checkGameWin()) {
+      state.server = team;
+      saveToSheet('point');
+    }
+  }
+
+  renderHistory();
+  render();
+}
+
+function toggleServer() {
+  state.server = state.server === 'a' ? 'b' : 'a';
+  render();
+}
+
+function undoLast() {
+  if (!state.history.length) return;
+  const last = state.history.pop();
+  state = last.snap;
+  state.history = state.history || [];
+  state.finished = false;
+  document.getElementById('winner-banner').classList.remove('show');
+  renderHistory();
+  render();
+}
+
+function newGame() {
+  if (state.finished) return;
+  state.gameHistory.push({ a: state.scoreA, b: state.scoreB });
+  state.scoreA = 0; state.scoreB = 0;
+  state.currentGame++;
+  renderHistory();
+  render();
+}
+
+function resetMatch() {
+  if (!confirm('Reset toàn bộ trận đấu?')) return;
+  state = {
+    scoreA: 0, scoreB: 0, gamesA: 0, gamesB: 0,
+    gameHistory: [], server: 'a', history: [],
+    finished: false, currentGame: 1
+  };
+  document.getElementById('winner-banner').classList.remove('show');
+  document.getElementById('save-status').textContent = '';
+  renderHistory();
+  render();
+}
+
+function toggleHistory() {
+  const p = document.getElementById('history-panel');
+  p.classList.toggle('open');
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!state.history.length) {
+    el.innerHTML = '<div class="history-item" style="color:var(--text3)">Chưa có điểm nào.</div>';
+    return;
+  }
+  el.innerHTML = [...state.history].reverse().slice(0, 30).map(h =>
+    `<div class="history-item">
+      <span>${h.label}</span>
+      <span class="badge">${h.score}</span>
+    </div>`
+  ).join('');
+}
+
+// ── KHỞI ĐỘNG ──
+render();
+</script>
+</body>
+</html>
