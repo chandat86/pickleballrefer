@@ -440,6 +440,12 @@
   <div class="settings-bar">
 <!-- TOURNAMENT CONFIG -->
 <div class="settings-bar">
+<label>Sân</label>
+  <select id="court">
+    <option value="Sân 1">Sân 1</option>
+    <option value="Sân 2">Sân 2</option>
+    <option value="Sân 3">Sân 3</option>
+  </select>
   <label>Bảng</label>
   <select id="group">
     <option value="A">A</option>
@@ -590,10 +596,16 @@ if (!group || !referee) {
   showStatus("⚠️ Chưa chọn bảng hoặc nhập trọng tài", "error");
   return;
 }
+const court = document.getElementById('court')?.value || "";
+if (!court) {
+  showStatus("⚠️ Chưa chọn sân", "error");
+  return;
+}
   const payload = {
     matchId,
   timestamp: new Date().toLocaleString('vi-VN'),
 
+  court: court,
   group: group,
   referee: referee,
 
