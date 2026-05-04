@@ -592,13 +592,9 @@ async function saveToSheet(eventType) {
   if (!SHEET_URL) return;
 const group = document.getElementById('group')?.value || "";
 const referee = document.getElementById('referee')?.value || "";
-if (!group || !referee) {
-  showStatus("⚠️ Chưa chọn bảng hoặc nhập trọng tài", "error");
-  return;
-}
 const court = document.getElementById('court')?.value || "";
-if (!court) {
-  showStatus("⚠️ Chưa chọn sân", "error");
+if (!group || !referee) {
+  showStatus("⚠️ Chưa chọn Sân, Bảng hoặc nhập trọng tài", "error");
   return;
 }
   const payload = {
