@@ -437,6 +437,7 @@
   </div>
 
   <!-- SETTINGS -->
+  <div class="settings-bar">
 <!-- TOURNAMENT CONFIG -->
 <div class="settings-bar">
   <label>Bảng</label>
@@ -583,24 +584,35 @@ let state = {
 // ══════════════════════════════════════════
 async function saveToSheet(eventType) {
   if (!SHEET_URL) return;
-
+const group = document.getElementById('group')?.value || "";
+const referee = document.getElementById('referee')?.value || "";
+if (!group || !referee) {
+  showStatus("⚠️ Chưa chọn bảng hoặc nhập trọng tài", "error");
+  return;
+}
   const payload = {
     matchId,
-    timestamp: new Date().toLocaleString('vi-VN'),
-    teamA:  document.getElementById('name-a').value,
-    teamB:  document.getElementById('name-b').value,
-    scoreA: state.scoreA,
-    scoreB: state.scoreB,
-    gamesA: state.gamesA,
-    gamesB: state.gamesB,
-    currentGame: state.currentGame,
-    server: state.server === 'a'
-            ? document.getElementById('name-a').value
-            : document.getElementById('name-b').value,
-    event:  eventType,
-    winScore: getWinScore(),
-    bestOf:   getBestOf()
-  };
+  timestamp: new Date().toLocaleString('vi-VN'),
+
+  group: group,
+  referee: referee,
+
+  teamA: document.getElementById('name-a').value,
+  teamB: document.getElementById('name-b').value,
+
+  scoreA: state.scoreA,
+  scoreB: state.scoreB,
+  gamesA: state.gamesA,
+  gamesB: state.gamesB,
+  currentGame: state.currentGame,
+  server: state.server === 'a'
+    ? document.getElementById('name-a').value
+    : document.getElementById('name-b').value,
+
+  event: eventType,
+  winScore: getWinScore(),
+  bestOf: getBestOf()
+};
 
   showStatus('⏳ Đang lưu...', 'saving');
 
