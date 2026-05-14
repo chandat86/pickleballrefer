@@ -838,11 +838,11 @@ function startTimer(type, side) {
     const teamBOrig = m.origTeamB || m.teamB;
     const scoreAOrig = origSideA === 'a' ? S.a : S.b;
     const scoreBOrig = origSideA === 'a' ? S.b : S.a;
-    // Xác định đội nào gọi timeout (side = 'a' hoặc 'b' trên màn hình)
-    const callerIsOrigA = (side === 'a' && origSideA === 'a') || (side === 'b' && origSideA === 'b');
+    // side = 'a'/'b' trên màn hình; callerIsOrigA khi side === origSideA
+    const callerIsOrigA = (side === origSideA);
     const eventLabel = type === 'timeout' ? '⏱ Timeout' : '🏥 Medical';
     syncGS('log', [
-      now(),
+      nowMs(), now(),
       m.noidung||'', m.bang||'', m.code,
       teamAOrig,
       callerIsOrigA ? eventLabel : '',
@@ -1400,22 +1400,27 @@ function addScore(side, delta) {
     pushLiveScore();
     if (GS_URL && S.currentMatch) {
       const m = S.currentMatch;
-      // Xác định đội gốc nào ghi điểm (theo origSideA)
       const origSideA = m.origSideA || 'a';
       const teamAOrig = m.origTeamA || m.teamA;
       const teamBOrig = m.origTeamB || m.teamB;
+
+      // S.a = điểm của card bên TRÁI màn hình hiện tại
+      // origSideA = 'a' nghĩa là Đội A gốc đang ở bên TRÁI (card-a)
+      // → scoreAOrig = điểm Đội A gốc = S.a nếu origSideA==='a', ngược lại = S.b
       const scoreAOrig = origSideA === 'a' ? S.a : S.b;
       const scoreBOrig = origSideA === 'a' ? S.b : S.a;
-      // side ghi điểm → đội gốc nào?
-      const scorerIsOrigA = (side === 'a' && origSideA === 'a') || (side === 'b' && origSideA === 'b');
-      // 12 cột: Thời gian, Nội dung, Bảng, Mã trận, Đội A, (+1)ĐộiA, Tỉ số, (+1)ĐộiB, Đội B, Game, Quy tắc, Trọng tài
+
+      // side='a' nghĩa là card trái ghi điểm
+      // Đội A gốc ghi điểm khi: (side==='a' và origSideA==='a') HOẶC (side==='b' và origSideA==='b')
+      const scorerIsOrigA = (side === origSideA);
+
       syncGS('log', [
-        now(),
+        nowMs(), now(),
         m.noidung||'', m.bang||'', m.code,
         teamAOrig,
-        scorerIsOrigA ? '+1' : '',       // cột (+1) Đội A
-        `${scoreAOrig}–${scoreBOrig}`,   // tỉ số theo đội gốc
-        scorerIsOrigA ? '' : '+1',       // cột (+1) Đội B
+        scorerIsOrigA ? '+1' : '',
+        `${scoreAOrig}–${scoreBOrig}`,
+        scorerIsOrigA ? '' : '+1',
         teamBOrig,
         'Game '+S.game,
         RULES[winRule].label,
@@ -1496,14 +1501,13 @@ function logToGS(eventType, note) {
   const teamBOrig = m.origTeamB || m.teamB;
   const scoreAOrig = origSideA === 'a' ? S.a : S.b;
   const scoreBOrig = origSideA === 'a' ? S.b : S.a;
-  // Sự kiện không ghi điểm: ghi tên sự kiện vào cột (+1) Đội A hoặc để trống
   syncGS('log', [
-    now(),
+    nowMs(), now(),
     m.noidung||'', m.bang||'', m.code,
     teamAOrig,
-    eventType,          // cột (+1) Đội A — dùng để ghi loại sự kiện
+    eventType,
     `${scoreAOrig}–${scoreBOrig}`,
-    note||'',           // cột (+1) Đội B — ghi ghi chú nếu có
+    note||'',
     teamBOrig,
     'Game '+S.game,
     RULES[winRule].label,
@@ -1956,6 +1960,7 @@ document.querySelectorAll(".modal-ov").forEach(m=>m.onclick=e=>{if(e.target===m)
 
 // ── UTILS ──
 function now(){const d=new Date();return d.toLocaleDateString('vi-VN')+' '+d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+function nowMs(){return new Date().toISOString();} // ISO with ms: 2025-05-14T08:22:22.123Z — dùng để sort GAS
 function ts(){return new Date().toISOString().slice(0,16).replace(/[T:]/g,'-');}
 function toast(msg, duration) {
   const el = document.getElementById('toast');
