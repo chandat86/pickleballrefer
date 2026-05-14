@@ -1645,10 +1645,18 @@ function confirmSave() {
 
   // 2. Lưu local ngay lập tức
   S.results[m.key] = entry;
-  _resultsCleared = false; // cho phép tải kết quả từ GSheets trở lại
+  _resultsCleared = false;
   try { localStorage.setItem('pb_res6', JSON.stringify(S.results)); } catch(e) {}
 
-  // 3. Cập nhật UI ngay
+  // 3. Cập nhật matchScoreA/B trong matchList NGAY để hiện tỉ số trong khung chọn trận
+  const matchIdx = matchList.findIndex(x => x.key === m.key);
+  if (matchIdx !== -1) {
+    matchList[matchIdx].matchScoreA = scoreOrig_A;
+    matchList[matchIdx].matchScoreB = scoreOrig_B;
+    saveMatchList();
+  }
+
+  // 4. Cập nhật UI ngay
   renderResults();
   renderMatchGrid();
 
