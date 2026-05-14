@@ -929,7 +929,7 @@ function saveGsUrl() {
   if (hint) hint.style.display = GS_URL ? 'none' : 'block';
   updateGsBadge();
   toast('✅ Đã lưu URL GSheets vào app!');
-  if (GS_URL) loadAllFromGS();
+  if (GS_URL) { loadAllFromGS(); startAutoPoll(); }
 }
 
 function updateGsBadge() {
@@ -1810,7 +1810,56 @@ function changePassword() {
   toast('✅ Đã đổi mật khẩu thành công!', 3000);
 }
 
-// ── GIẢI MỚI ──
+// ── AUTO-POLL: tự động phát hiện và tải trận mới từ GSheets ──
+let _lastMatchCount = 0; // số trận lần poll trước
+let _pollInterval   = null;
+
+function startAutoPoll() {
+  if (_pollInterval) clearInterval(_pollInterval);
+  if (!GS_URL) return;
+  _lastMatchCount = matchList.length;
+
+  _pollInterval = setInterval(async () => {
+    if (!GS_URL) return;
+    try {
+      const data = await getFromGS('?action=matches');
+      if (!data?.rows?.length) return;
+
+      const newCount = data.rows.length - 1; // trừ header
+      if (newCount === _lastMatchCount) return; // không đổi → bỏ qua
+
+      // Có thay đổi → parse và cập nhật matchList
+      const newMatches = [];
+      data.rows.slice(1).forEach(r => {
+        const nd   = String(r[0]||'').trim();
+        const bang = String(r[1]||'').trim();
+        const code = String(r[2]||'').trim();
+        const tA   = String(r[3]||'').trim();
+        const tB   = String(r[6]||'').trim();
+        const sA   = (r[4] !== '' && r[4] !== null && r[4] !== undefined) ? Number(r[4]) : null;
+        const sB   = (r[5] !== '' && r[5] !== null && r[5] !== undefined) ? Number(r[5]) : null;
+        if (!nd || !code) return;
+        newMatches.push({ noidung:nd, bang, code, teamA:tA, teamB:tB, matchScoreA:sA, matchScoreB:sB, key:`${nd}|${bang}|${code}` });
+      });
+
+      const added = newCount - _lastMatchCount;
+      _lastMatchCount = newCount;
+      matchList = newMatches;
+      saveMatchList();
+      syncDropdownsFromData(true);
+      renderMatchGrid();
+
+      if (added > 0) {
+        toast(`🔄 ${added} trận mới từ GSheets!`, 3000);
+        setDot('ok');
+      }
+    } catch(e) { /* silent fail */ }
+  }, 15000); // poll mỗi 15 giây
+}
+
+function stopAutoPoll() {
+  if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+}
 function openNewTournamentModal() {
   // Cập nhật số lượng vào label
   document.getElementById('clr-results-count').textContent =
@@ -2102,7 +2151,7 @@ document.getElementById('sel-noidung').addEventListener('change', renderMatchGri
 document.getElementById('sel-bang').addEventListener('change', renderMatchGrid);
 
 // Làm mới từ GSheets ngầm
-if (GS_URL) setTimeout(() => loadAllFromGS(), 300);
+if (GS_URL) setTimeout(async () => { await loadAllFromGS(); startAutoPoll(); }, 300);
 </script>
 </body>
 </html>
