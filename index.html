@@ -1099,9 +1099,11 @@ function syncDropdownsFromData(preserveSelection) {
   const curND   = preserveSelection ? ndSel.value   : '';
   const curBang = preserveSelection ? bangSel.value : '';
 
-  const nds   = [...new Set(matchList.map(m => m.noidung).filter(Boolean))].sort();
-  const bangs = [...new Set(matchList.map(m => m.bang).filter(Boolean))].sort();
+  // Giữ thứ tự xuất hiện trong Matches (không sort ABC)
+  const nds   = [...new Set(matchList.map(m => m.noidung).filter(Boolean))];
+  const bangs = [...new Set(matchList.map(m => m.bang).filter(Boolean))];
 
+  // Rebuild Nội dung dropdown
   ndSel.innerHTML = '<option value="">-- Chọn nội dung --</option>';
   nds.forEach(nd => {
     const opt = document.createElement('option');
@@ -1109,6 +1111,7 @@ function syncDropdownsFromData(preserveSelection) {
     ndSel.appendChild(opt);
   });
 
+  // Rebuild Bảng dropdown
   bangSel.innerHTML = '<option value="">-- Chọn bảng --</option>';
   bangs.forEach(b => {
     const opt = document.createElement('option');
@@ -1119,6 +1122,9 @@ function syncDropdownsFromData(preserveSelection) {
   // Khôi phục selection nếu vẫn hợp lệ
   if (curND   && nds.includes(curND))     ndSel.value   = curND;
   if (curBang && bangs.includes(curBang)) bangSel.value = curBang;
+
+  // Cập nhật badge khung chọn trận
+  renderMatchGrid();
 }
 
 // Debug: kiểm tra data đã load
@@ -1844,7 +1850,8 @@ async function pollMatches() {
     const data = await getFromGS('?action=matches');
     if (!data?.rows?.length) return;
     const newCount = data.rows.length - 1;
-    if (newCount === _lastMatchCount) return;
+    if (newCount === _lastMatchCount) return; // không đổi → bỏ qua
+
     const newMatches = [];
     data.rows.slice(1).forEach(r => {
       const nd=String(r[0]||'').trim(), bang=String(r[1]||'').trim(), code=String(r[2]||'').trim();
@@ -1854,13 +1861,19 @@ async function pollMatches() {
       if (!nd||!code) return;
       newMatches.push({noidung:nd,bang,code,teamA:tA,teamB:tB,matchScoreA:sA,matchScoreB:sB,key:`${nd}|${bang}|${code}`});
     });
+
     const added = newCount - _lastMatchCount;
     _lastMatchCount = newCount;
     matchList = newMatches;
     saveMatchList();
+
+    // syncDropdownsFromData đã gọi renderMatchGrid() bên trong
     syncDropdownsFromData(true);
-    renderMatchGrid();
-    if (added > 0) { toast(`🔄 ${added} trận mới!`, 2500); setDot('ok'); }
+
+    if (added > 0) {
+      toast(`🔄 ${added} trận mới! Bảng đã cập nhật.`, 3000);
+      setDot('ok');
+    }
   } catch(e) {}
 }
 
