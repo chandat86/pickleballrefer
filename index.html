@@ -831,7 +831,29 @@ function startTimer(type, side) {
   }, 1000);
 
   pushLog(`${who} – ${type==='timeout'?'⏱ Timeout':'🏥 Medical'}`, null);
-  if (GS_URL) syncGS('log',[now(),S.currentMatch?.code||'',`${who} ${type}`,`${S.a}–${S.b}`]);
+  if (GS_URL && S.currentMatch) {
+    const m = S.currentMatch;
+    const origSideA = m.origSideA || 'a';
+    const teamAOrig = m.origTeamA || m.teamA;
+    const teamBOrig = m.origTeamB || m.teamB;
+    const scoreAOrig = origSideA === 'a' ? S.a : S.b;
+    const scoreBOrig = origSideA === 'a' ? S.b : S.a;
+    // Xác định đội nào gọi timeout (side = 'a' hoặc 'b' trên màn hình)
+    const callerIsOrigA = (side === 'a' && origSideA === 'a') || (side === 'b' && origSideA === 'b');
+    const eventLabel = type === 'timeout' ? '⏱ Timeout' : '🏥 Medical';
+    syncGS('log', [
+      now(),
+      m.noidung||'', m.bang||'', m.code,
+      teamAOrig,
+      callerIsOrigA ? eventLabel : '',
+      `${scoreAOrig}–${scoreBOrig}`,
+      callerIsOrigA ? '' : eventLabel,
+      teamBOrig,
+      'Game '+S.game,
+      RULES[winRule].label,
+      document.getElementById('inp-referee').value||''
+    ]);
+  }
 }
 
 function updateTimerDisplay() {
@@ -1328,7 +1350,7 @@ function renderHistory() {
   list.innerHTML = evLog.slice(-60).reverse().map(e=>
     `<div class="h-item">
       <span class="h-time">${e.time}</span>
-      <span>${e.desc}</span>
+      <span>${e.desc} ${e.game?'<small style="color:var(--g400)">'+e.game+'</small>':''}</span>
       <span class="h-score">${e.score}</span>
       <span class="h-ref">${e.ref||''}</span>
     </div>`).join('');
@@ -1375,9 +1397,31 @@ function addScore(side, delta) {
   S.history.push({snap,desc});
   render();
   if (delta>0) {
-    pushLiveScore(); // cập nhật live score lên GSheets realtime
-    if (GS_URL&&S.currentMatch)
-      syncGS('log',[now(),S.currentMatch.code,desc,`${S.a}–${S.b}`,RULES[winRule].label]);
+    pushLiveScore();
+    if (GS_URL && S.currentMatch) {
+      const m = S.currentMatch;
+      // Xác định đội gốc nào ghi điểm (theo origSideA)
+      const origSideA = m.origSideA || 'a';
+      const teamAOrig = m.origTeamA || m.teamA;
+      const teamBOrig = m.origTeamB || m.teamB;
+      const scoreAOrig = origSideA === 'a' ? S.a : S.b;
+      const scoreBOrig = origSideA === 'a' ? S.b : S.a;
+      // side ghi điểm → đội gốc nào?
+      const scorerIsOrigA = (side === 'a' && origSideA === 'a') || (side === 'b' && origSideA === 'b');
+      // 12 cột: Thời gian, Nội dung, Bảng, Mã trận, Đội A, (+1)ĐộiA, Tỉ số, (+1)ĐộiB, Đội B, Game, Quy tắc, Trọng tài
+      syncGS('log', [
+        now(),
+        m.noidung||'', m.bang||'', m.code,
+        teamAOrig,
+        scorerIsOrigA ? '+1' : '',       // cột (+1) Đội A
+        `${scoreAOrig}–${scoreBOrig}`,   // tỉ số theo đội gốc
+        scorerIsOrigA ? '' : '+1',       // cột (+1) Đội B
+        teamBOrig,
+        'Game '+S.game,
+        RULES[winRule].label,
+        document.getElementById('inp-referee').value||''
+      ]);
+    }
   }
 }
 
@@ -1395,7 +1439,8 @@ function swapSides() {
     document.getElementById('name-b').textContent=S.currentMatch.teamB;
   }
   document.getElementById('swap-notice').classList.remove('show');
-  pushLog('⇄ Đổi sân',null);
+  pushLog('⇄ Đổi sân', null);
+  logToGS('⇄ Đổi sân', '');
   render();
 }
 
@@ -1414,7 +1459,8 @@ function nextGame() {
   S.game++; S.a=0; S.b=0; S.history=[];
   swapNotified=false;
   document.getElementById('swap-notice').classList.remove('show');
-  pushLog(`▶ Game ${S.game} bắt đầu`,null);
+  pushLog(`▶ Game ${S.game} bắt đầu`, null);
+  logToGS(`▶ Bắt đầu Game ${S.game}`, '');
   render();
 }
 
@@ -1427,11 +1473,42 @@ function resetMatch() {
   render();
 }
 
-function pushLog(desc,snap) {
-  const s=snap?JSON.parse(snap):{a:S.a,b:S.b};
-  evLog.push({time:now(),desc,score:`${s.a}–${s.b}`,ref:S.currentMatch?.code||''});
-  try{localStorage.setItem('pb_ev6',JSON.stringify(evLog));}catch(e){}
+function pushLog(desc, snap) {
+  const s = snap ? JSON.parse(snap) : {a:S.a, b:S.b};
+  evLog.push({
+    time: now(), desc,
+    score: `${s.a}–${s.b}`,
+    ref: S.currentMatch?.code || '',
+    noidung: S.currentMatch?.noidung || '',
+    bang: S.currentMatch?.bang || '',
+    game: S.game,
+  });
+  try { localStorage.setItem('pb_ev6', JSON.stringify(evLog)); } catch(e) {}
   renderHistory();
+}
+
+// Ghi log sự kiện lên GSheets (không phải ghi điểm)
+function logToGS(eventType, note) {
+  if (!GS_URL || !S.currentMatch) return;
+  const m = S.currentMatch;
+  const origSideA = m.origSideA || 'a';
+  const teamAOrig = m.origTeamA || m.teamA;
+  const teamBOrig = m.origTeamB || m.teamB;
+  const scoreAOrig = origSideA === 'a' ? S.a : S.b;
+  const scoreBOrig = origSideA === 'a' ? S.b : S.a;
+  // Sự kiện không ghi điểm: ghi tên sự kiện vào cột (+1) Đội A hoặc để trống
+  syncGS('log', [
+    now(),
+    m.noidung||'', m.bang||'', m.code,
+    teamAOrig,
+    eventType,          // cột (+1) Đội A — dùng để ghi loại sự kiện
+    `${scoreAOrig}–${scoreBOrig}`,
+    note||'',           // cột (+1) Đội B — ghi ghi chú nếu có
+    teamBOrig,
+    'Game '+S.game,
+    RULES[winRule].label,
+    document.getElementById('inp-referee').value||''
+  ]);
 }
 
 // ── SAVE: Bước 1 – Hiện popup xác nhận (tức thì, không lag) ──
@@ -1503,6 +1580,7 @@ function confirmSave() {
 
   // 4. Log + toast
   pushLog(`✅ LƯU: ${m.code} → ${scoreOrig_A}–${scoreOrig_B} (${sn(winner)} thắng)`, null);
+  logToGS(`✅ Kết quả: ${scoreOrig_A}–${scoreOrig_B}`, sn(winner)+' thắng');
   const winnerLabel = scoreOrig_A !== scoreOrig_B ? `🏆 ${sn(winner)} thắng` : '🤝 Hoà';
   toast(`💾 Đã lưu: ${m.code} · ${scoreOrig_A}–${scoreOrig_B} · ${winnerLabel}`, 4000);
 
@@ -1861,8 +1939,12 @@ function exportCSV() {
   const hd=['Thời gian','Nội dung','Bảng','Mã trận','Đội A','Đội B','Điểm A','Điểm B','Thắng','Sân','Trọng tài','Quy tắc'];
   const rows=arr.map(r=>[r.savedAt,r.noidung,r.bang,r.code,r.teamA,r.teamB,r.scoreA,r.scoreB,r.winner,r.court||'',r.referee||'',r.winRule||''].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
   dl('\uFEFF'+[hd.join(','),...rows].join('\n'),`PB_KetQua_${ts()}.csv`);
-  const lhd=['Thời gian','Sự kiện','Tỉ số','Trận'];
-  const lr=evLog.map(e=>[e.time,e.desc,e.score,e.ref||''].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const lhd=['Thời gian','Nội dung','Bảng','Mã trận','Đội A','(+1) Đội A','Tỉ số','(+1) Đội B','Đội B','Game','Quy tắc','Trọng tài'];
+  const lr=evLog.map(e=>[
+    e.time, e.noidung||'', e.bang||'', e.ref||'',
+    '', e.desc, e.score, '', '',
+    e.game||'', '', ''
+  ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
   setTimeout(()=>dl('\uFEFF'+[lhd.join(','),...lr].join('\n'),`PB_NhatKy_${ts()}.csv`),600);
   toast('✅ Đã xuất 2 file CSV!');
 }
