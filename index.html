@@ -476,7 +476,7 @@ select, input { font-family: inherit; }
   <div class="card-body open">
     <div class="res-wrap">
       <table class="res-table">
-        <thead><tr><th>Thời gian</th><th>Trận</th><th>Đội A</th><th>Tỉ số</th><th>Đội B</th><th>Thắng</th><th>Sân</th></tr></thead>
+        <thead><tr><th>Thời gian</th><th>Nội dung</th><th>Bảng</th><th>Mã trận</th><th>Đội A</th><th>Tỉ số</th><th>Đội B</th><th>Thắng</th><th>Sân</th><th>Trọng tài</th><th>Quy tắc</th></tr></thead>
         <tbody id="res-body"><tr><td colspan="7" class="empty-msg">Chưa có kết quả</td></tr></tbody>
       </table>
     </div>
@@ -989,13 +989,14 @@ async function loadAllFromGS() {
   let addedResults = 0;
   if (!_resultsCleared && resultData?.rows?.length > 1) {
     resultData.rows.slice(1).forEach(r => {
-      if (!r[0] || !r[1]) return;
-      const code = String(r[1]||'').trim();
+      if (!r[0] || !r[3]) return;
+      // Thứ tự cột mới: savedAt(0), noidung(1), bang(2), code(3), teamA(4), teamB(5), scoreA(6), scoreB(7), winner(8), court(9), referee(10), winRule(11)
+      const code = String(r[3]||'').trim();
       const matchKey = matchList.find(m => m.code === code)?.key;
       if (matchKey && !S.results[matchKey]) {
         S.results[matchKey] = {
-          savedAt: r[0], code, noidung: String(r[2]||'').trim(), bang: String(r[3]||'').trim(),
-          teamA: String(r[4]||'').trim(), teamB: String(r[5]||'').trim(),
+          savedAt: r[0], noidung: String(r[1]||'').trim(), bang: String(r[2]||'').trim(),
+          code, teamA: String(r[4]||'').trim(), teamB: String(r[5]||'').trim(),
           scoreA: Number(r[6])||0, scoreB: Number(r[7])||0,
           winner: String(r[8]||'').trim(), court: String(r[9]||'').trim(),
           referee: String(r[10]||'').trim(), winRule: String(r[11]||'').trim(),
@@ -1331,16 +1332,20 @@ function renderResults() {
   const body=document.getElementById('res-body');
   const arr=Object.values(S.results);
   document.getElementById('res-badge').textContent=arr.length;
-  if (!arr.length) { body.innerHTML='<tr><td colspan="7" class="empty-msg">Chưa có kết quả</td></tr>'; return; }
+  if (!arr.length) { body.innerHTML='<tr><td colspan="11" class="empty-msg">Chưa có kết quả</td></tr>'; return; }
   body.innerHTML=arr.slice().reverse().map(r=>`
     <tr>
       <td style="font-size:10px;white-space:nowrap">${r.savedAt}</td>
+      <td style="font-size:11px;color:var(--g500)">${r.noidung||'–'}</td>
+      <td style="font-size:11px;color:var(--g500)">${r.bang||'–'}</td>
       <td><strong style="color:var(--green-dk)">${r.code}</strong></td>
       <td style="font-size:11px">${sn(r.teamA)}</td>
       <td class="res-score">${r.scoreA}–${r.scoreB}</td>
       <td style="font-size:11px">${sn(r.teamB)}</td>
       <td class="res-win">🏆${sn(r.winner)}</td>
       <td style="font-size:10px;color:var(--g400)">${r.court||'–'}</td>
+      <td style="font-size:10px;color:var(--g400)">${r.referee||'–'}</td>
+      <td style="font-size:10px;color:var(--g400)">${r.winRule||'–'}</td>
     </tr>`).join('');
 }
 
@@ -1498,7 +1503,7 @@ function confirmSave() {
   // 5. Sync GSheets hoàn toàn ngầm
   if (GS_URL) {
     syncGS('append', [
-      entry.savedAt, entry.code, entry.noidung, entry.bang,
+      entry.savedAt, entry.noidung, entry.bang, entry.code,
       entry.teamA,   entry.teamB, entry.scoreA, entry.scoreB,
       entry.winner,  entry.court||'', entry.referee||'', entry.winRule,
     ]);
@@ -1685,10 +1690,10 @@ function _autoBackupCSV() {
   try {
     const arr = Object.values(S.results);
     if (!arr.length) return;
-    const hd = ['Thời gian','Mã trận','Nội dung','Bảng','Đội A','Đội B',
+    const hd = ['Thời gian','Nội dung','Bảng','Mã trận','Đội A','Đội B',
                  'Điểm A','Điểm B','Thắng','Sân','Trọng tài','Quy tắc'];
     const rows = arr.map(r =>
-      [r.savedAt,r.code,r.noidung,r.bang,r.teamA,r.teamB,
+      [r.savedAt,r.noidung,r.bang,r.code,r.teamA,r.teamB,
        r.scoreA,r.scoreB,r.winner,r.court||'',r.referee||'',r.winRule||'']
       .map(v => `"${String(v||'').replace(/"/g,'""')}"`)
       .join(',')
@@ -1847,8 +1852,8 @@ function openCamExternal() {
 function exportCSV() {
   const arr=Object.values(S.results);
   if (!arr.length) { toast('Chưa có kết quả!'); return; }
-  const hd=['Thời gian','Mã trận','Nội dung','Bảng','Đội A','Đội B','Điểm A','Điểm B','Thắng','Sân','Trọng tài','Quy tắc'];
-  const rows=arr.map(r=>[r.savedAt,r.code,r.noidung,r.bang,r.teamA,r.teamB,r.scoreA,r.scoreB,r.winner,r.court||'',r.referee||'',r.winRule||''].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const hd=['Thời gian','Nội dung','Bảng','Mã trận','Đội A','Đội B','Điểm A','Điểm B','Thắng','Sân','Trọng tài','Quy tắc'];
+  const rows=arr.map(r=>[r.savedAt,r.noidung,r.bang,r.code,r.teamA,r.teamB,r.scoreA,r.scoreB,r.winner,r.court||'',r.referee||'',r.winRule||''].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
   dl('\uFEFF'+[hd.join(','),...rows].join('\n'),`PB_KetQua_${ts()}.csv`);
   const lhd=['Thời gian','Sự kiện','Tỉ số','Trận'];
   const lr=evLog.map(e=>[e.time,e.desc,e.score,e.ref||''].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
