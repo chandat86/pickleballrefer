@@ -168,13 +168,27 @@ select, input { font-family: inherit; }
 .h-ref { color:var(--g400); font-size:10px; text-align:right; }
 
 /* ── RESULTS ── */
-.res-wrap { overflow-x:auto; }
-.res-table { width:100%; border-collapse:collapse; font-size:11.5px; min-width:380px; }
-.res-table th { background:var(--g50); padding:6px 8px; text-align:left; font-weight:700; color:var(--g500); border-bottom:1px solid var(--g200); font-size:10.5px; white-space:nowrap; }
-.res-table td { padding:6px 8px; border-bottom:1px solid var(--g100); }
+.res-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.res-table { width:100%; border-collapse:collapse; font-size:12px; min-width:480px; table-layout:fixed; }
+.res-table th { background:var(--g50); padding:6px 8px; text-align:left; font-weight:700; color:var(--g500); border-bottom:2px solid var(--g200); font-size:10.5px; white-space:nowrap; vertical-align:middle; }
+.res-table td { padding:7px 8px; border-bottom:1px solid var(--g100); vertical-align:middle; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .res-table tr:hover td { background:var(--g50); }
-.res-score { font-family:'Oswald',sans-serif; font-weight:700; font-size:14px; color:var(--green-dk); text-align:center; }
+.res-table tr:nth-child(even) td { background:#fafbfc; }
+.res-table tr:nth-child(even):hover td { background:var(--g50); }
+/* Column widths */
+.res-table .col-time   { width:90px; }
+.res-table .col-nd     { width:80px; }
+.res-table .col-bang   { width:58px; }
+.res-table .col-code   { width:46px; }
+.res-table .col-team   { width:120px; }
+.res-table .col-score  { width:54px; }
+.res-table .col-win    { width:110px; }
+.res-table .col-court  { width:46px; }
+.res-table .col-ref    { width:60px; }
+.res-score { font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; color:var(--green-dk); text-align:center; letter-spacing:.5px; }
 .res-win { color:var(--green-dk); font-weight:700; }
+.res-team { font-size:11.5px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.res-badge-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); margin-right:4px; vertical-align:middle; }
 
 /* ── TIMER MODAL ── */
 .timer-modal { display:none; position:fixed; inset:0; background:rgba(15,23,42,.5); backdrop-filter:blur(4px); z-index:300; align-items:center; justify-content:center; padding:20px; }
@@ -476,7 +490,19 @@ select, input { font-family: inherit; }
   <div class="card-body open">
     <div class="res-wrap">
       <table class="res-table">
-        <thead><tr><th>Thời gian</th><th>Nội dung</th><th>Bảng</th><th>Mã trận</th><th>Đội A</th><th>Tỉ số</th><th>Đội B</th><th>Thắng</th><th>Sân</th><th>Trọng tài</th><th>Quy tắc</th></tr></thead>
+        <thead><tr>
+          <th class="col-time">Thời gian</th>
+          <th class="col-nd">Nội dung</th>
+          <th class="col-bang">Bảng</th>
+          <th class="col-code">Mã</th>
+          <th class="col-team">Đội A</th>
+          <th class="col-score">Tỉ số</th>
+          <th class="col-team">Đội B</th>
+          <th class="col-win">Thắng</th>
+          <th class="col-court">Sân</th>
+          <th class="col-ref">Trọng tài</th>
+          <th class="col-nd">Quy tắc</th>
+        </tr></thead>
         <tbody id="res-body"><tr><td colspan="7" class="empty-msg">Chưa có kết quả</td></tr></tbody>
       </table>
     </div>
@@ -1360,24 +1386,35 @@ function renderHistory() {
 }
 
 function renderResults() {
-  const body=document.getElementById('res-body');
-  const arr=Object.values(S.results);
-  document.getElementById('res-badge').textContent=arr.length;
-  if (!arr.length) { body.innerHTML='<tr><td colspan="11" class="empty-msg">Chưa có kết quả</td></tr>'; return; }
-  body.innerHTML=arr.slice().reverse().map(r=>`
+  const body = document.getElementById('res-body');
+  const arr  = Object.values(S.results);
+  document.getElementById('res-badge').textContent = arr.length;
+  if (!arr.length) {
+    body.innerHTML = '<tr><td colspan="11" class="empty-msg">Chưa có kết quả</td></tr>';
+    return;
+  }
+  body.innerHTML = arr.slice().reverse().map(r => {
+    // Rút gọn thời gian: chỉ lấy giờ:phút
+    const timeShort = (r.savedAt || '').replace(/^\d+\/\d+\/\d+\s/, '').slice(0, 5);
+    const dateShort = (r.savedAt || '').split(' ')[0] || '';
+    return `
     <tr>
-      <td style="font-size:10px;white-space:nowrap">${r.savedAt}</td>
-      <td style="font-size:11px;color:var(--g500)">${r.noidung||'–'}</td>
-      <td style="font-size:11px;color:var(--g500)">${r.bang||'–'}</td>
-      <td><strong style="color:var(--green-dk)">${r.code}</strong></td>
-      <td style="font-size:11px">${sn(r.teamA)}</td>
-      <td class="res-score">${r.scoreA}–${r.scoreB}</td>
-      <td style="font-size:11px">${sn(r.teamB)}</td>
-      <td class="res-win">🏆${sn(r.winner)}</td>
-      <td style="font-size:10px;color:var(--g400)">${r.court||'–'}</td>
-      <td style="font-size:10px;color:var(--g400)">${r.referee||'–'}</td>
-      <td style="font-size:10px;color:var(--g400)">${r.winRule||'–'}</td>
-    </tr>`).join('');
+      <td class="col-time" style="font-size:10px;color:var(--g500)">
+        <div style="font-weight:600;color:var(--g700)">${timeShort}</div>
+        <div style="font-size:9.5px;color:var(--g400)">${dateShort}</div>
+      </td>
+      <td class="col-nd" style="font-size:10.5px;color:var(--g600);white-space:normal;line-height:1.3">${r.noidung||'–'}</td>
+      <td class="col-bang" style="font-size:11px;font-weight:600;color:var(--g700)">${r.bang||'–'}</td>
+      <td class="col-code"><strong style="font-family:'Oswald',sans-serif;color:var(--green-dk);font-size:13px">${r.code}</strong></td>
+      <td class="col-team" style="font-size:11.5px;font-weight:500">${sn(r.teamA)}</td>
+      <td class="col-score res-score">${r.scoreA} – ${r.scoreB}</td>
+      <td class="col-team" style="font-size:11.5px;font-weight:500">${sn(r.teamB)}</td>
+      <td class="col-win" style="font-size:11.5px;font-weight:700;color:var(--green-dk)">🏆 ${sn(r.winner)}</td>
+      <td class="col-court" style="font-size:11px;color:var(--g600);font-weight:600">${r.court||'–'}</td>
+      <td class="col-ref" style="font-size:10.5px;color:var(--g500)">${r.referee||'–'}</td>
+      <td class="col-nd" style="font-size:10px;color:var(--g400)">${(r.winRule||'–').replace(' cách 2','').replace('Chạm ','').replace(' (max ','/'). replace(')','')}</td>
+    </tr>`;
+  }).join('');
 }
 
 function sn(name) {
