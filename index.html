@@ -851,6 +851,7 @@ function startTimer(type, side) {
       teamBOrig,
       'Game '+S.game,
       RULES[winRule].label,
+      document.getElementById('inp-court').value||'', // Sân
       eventLabel,                                    // Sự kiện
       '',                                            // Đội thắng — trống
       document.getElementById('inp-referee').value||'' // Trọng tài
@@ -1426,6 +1427,7 @@ function addScore(side, delta) {
         teamBOrig,
         'Game '+S.game,
         RULES[winRule].label,
+        document.getElementById('inp-court').value||'', // Sân
         '',                                          // Sự kiện — trống (ghi điểm bình thường)
         '',                                          // Đội thắng — trống
         document.getElementById('inp-referee').value||''
@@ -1519,6 +1521,7 @@ function logToGS(eventType, note) {
     teamBOrig,
     'Game '+S.game,
     RULES[winRule].label,
+    document.getElementById('inp-court').value||'', // Sân
     eventType,                     // Sự kiện
     '',                                // Đội thắng — trống
     `${referee}${note?' · '+note:''}` // Trọng tài + ghi chú
@@ -1610,6 +1613,7 @@ function confirmSave() {
       teamBOrig2,
       'Game '+S.game,
       RULES[winRule].label,
+      document.getElementById('inp-court').value||'', // Sân
       '✅ Kết quả',                               // Sự kiện
       `${sn(winner)}`,                             // Đội thắng
       document.getElementById('inp-referee').value||'' // Trọng tài
