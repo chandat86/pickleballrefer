@@ -169,23 +169,25 @@ select, input { font-family: inherit; }
 
 /* ── RESULTS ── */
 .res-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-.res-table { width:100%; border-collapse:collapse; font-size:12px; min-width:480px; table-layout:fixed; }
-.res-table th { background:var(--g50); padding:6px 8px; text-align:left; font-weight:700; color:var(--g500); border-bottom:2px solid var(--g200); font-size:10.5px; white-space:nowrap; vertical-align:middle; }
-.res-table td { padding:7px 8px; border-bottom:1px solid var(--g100); vertical-align:middle; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.res-table { width:100%; border-collapse:collapse; font-size:11.5px; table-layout:fixed; }
+.res-table th { background:var(--g50); padding:5px 5px; text-align:left; font-weight:700; color:var(--g500); border-bottom:2px solid var(--g200); font-size:10px; white-space:nowrap; vertical-align:middle; }
+.res-table td { padding:5px 5px; border-bottom:1px solid var(--g100); vertical-align:middle; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .res-table tr:hover td { background:var(--g50); }
 .res-table tr:nth-child(even) td { background:#fafbfc; }
 .res-table tr:nth-child(even):hover td { background:var(--g50); }
-/* Column widths */
-.res-table .col-time   { width:90px; }
-.res-table .col-nd     { width:80px; }
-.res-table .col-bang   { width:58px; }
-.res-table .col-code   { width:46px; }
-.res-table .col-team   { width:120px; }
-.res-table .col-score  { width:54px; }
-.res-table .col-win    { width:110px; }
-.res-table .col-court  { width:46px; }
-.res-table .col-ref    { width:60px; }
-.res-score { font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; color:var(--green-dk); text-align:center; letter-spacing:.5px; }
+/* Cột tối ưu cho mobile - tổng ~560px */
+.res-table .col-time  { width:44px; }
+.res-table .col-nd    { width:60px; }
+.res-table .col-bang  { width:44px; }
+.res-table .col-code  { width:30px; }
+.res-table .col-team  { width:90px; }
+.res-table .col-score { width:50px; }
+.res-table .col-win   { width:80px; }
+.res-table .col-court { width:34px; }
+.res-table .col-ref   { width:44px; }
+.res-table .col-rule  { width:34px; }
+.res-score { font-family:'Oswald',sans-serif; font-weight:700; font-size:14px; color:var(--green-dk); text-align:center; white-space:nowrap; }
+.res-win { color:var(--green-dk); font-weight:700; }
 .res-win { color:var(--green-dk); font-weight:700; }
 .res-team { font-size:11.5px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .res-badge-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); margin-right:4px; vertical-align:middle; }
@@ -491,7 +493,7 @@ select, input { font-family: inherit; }
     <div class="res-wrap">
       <table class="res-table">
         <thead><tr>
-          <th class="col-time">Thời gian</th>
+          <th class="col-time">Giờ</th>
           <th class="col-nd">Nội dung</th>
           <th class="col-bang">Bảng</th>
           <th class="col-code">Mã</th>
@@ -500,8 +502,8 @@ select, input { font-family: inherit; }
           <th class="col-team">Đội B</th>
           <th class="col-win">Thắng</th>
           <th class="col-court">Sân</th>
-          <th class="col-ref">Trọng tài</th>
-          <th class="col-nd">Quy tắc</th>
+          <th class="col-ref">TT</th>
+          <th class="col-rule">QT</th>
         </tr></thead>
         <tbody id="res-body"><tr><td colspan="7" class="empty-msg">Chưa có kết quả</td></tr></tbody>
       </table>
@@ -1394,25 +1396,28 @@ function renderResults() {
     return;
   }
   body.innerHTML = arr.slice().reverse().map(r => {
-    // Rút gọn thời gian: chỉ lấy giờ:phút
-    const timeShort = (r.savedAt || '').replace(/^\d+\/\d+\/\d+\s/, '').slice(0, 5);
-    const dateShort = (r.savedAt || '').split(' ')[0] || '';
+    const parts = (r.savedAt || '').split(' ');
+    const timeShort = (parts[1] || '').slice(0,5);
+    const dateShort = (parts[0] || '').replace(/\/\d{4}$/, ''); // bỏ năm: 15/5
+    // Rút gọn quy tắc
+    const ruleShort = (r.winRule||'').replace('Chạm ','').replace(' cách 2 (max ','/').replace(')','');
+    // Tên đội rút gọn (trước dấu - nếu có)
+    const snA = sn(r.teamA), snB = sn(r.teamB), snW = sn(r.winner);
     return `
     <tr>
-      <td class="col-time" style="font-size:10px;color:var(--g500)">
-        <div style="font-weight:600;color:var(--g700)">${timeShort}</div>
-        <div style="font-size:9.5px;color:var(--g400)">${dateShort}</div>
+      <td class="col-time" style="font-size:9.5px;color:var(--g500);line-height:1.4">
+        <span style="font-weight:700;color:var(--g800);font-size:11px">${timeShort}</span><br>${dateShort}
       </td>
-      <td class="col-nd" style="font-size:10.5px;color:var(--g600);white-space:normal;line-height:1.3">${r.noidung||'–'}</td>
+      <td class="col-nd" style="font-size:10px;color:var(--g600);line-height:1.3;white-space:normal">${r.noidung||'–'}</td>
       <td class="col-bang" style="font-size:11px;font-weight:600;color:var(--g700)">${r.bang||'–'}</td>
-      <td class="col-code"><strong style="font-family:'Oswald',sans-serif;color:var(--green-dk);font-size:13px">${r.code}</strong></td>
-      <td class="col-team" style="font-size:11.5px;font-weight:500">${sn(r.teamA)}</td>
-      <td class="col-score res-score">${r.scoreA} – ${r.scoreB}</td>
-      <td class="col-team" style="font-size:11.5px;font-weight:500">${sn(r.teamB)}</td>
-      <td class="col-win" style="font-size:11.5px;font-weight:700;color:var(--green-dk)">🏆 ${sn(r.winner)}</td>
-      <td class="col-court" style="font-size:11px;color:var(--g600);font-weight:600">${r.court||'–'}</td>
-      <td class="col-ref" style="font-size:10.5px;color:var(--g500)">${r.referee||'–'}</td>
-      <td class="col-nd" style="font-size:10px;color:var(--g400)">${(r.winRule||'–').replace(' cách 2','').replace('Chạm ','').replace(' (max ','/'). replace(')','')}</td>
+      <td class="col-code" style="font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;color:var(--green-dk)">${r.code}</td>
+      <td class="col-team" style="font-size:11px">${snA}</td>
+      <td class="col-score res-score">${r.scoreA}–${r.scoreB}</td>
+      <td class="col-team" style="font-size:11px">${snB}</td>
+      <td class="col-win" style="font-size:11px;font-weight:700;color:var(--green-dk)">🏆 ${snW}</td>
+      <td class="col-court" style="font-size:10.5px;font-weight:600;color:var(--g600)">${r.court||'–'}</td>
+      <td class="col-ref" style="font-size:10px;color:var(--g500)">${r.referee||'–'}</td>
+      <td class="col-rule" style="font-size:10px;color:var(--g400)">${ruleShort||'–'}</td>
     </tr>`;
   }).join('');
 }
