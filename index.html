@@ -976,9 +976,13 @@ async function loadAllFromGS() {
       const bang = String(r[1]||'').trim();
       const code = String(r[2]||'').trim();
       const tA   = String(r[3]||'').trim();
-      const tB   = String(r[4]||'').trim();
+      // Cột mới: Đội A(3), Điểm A(4), Điểm B(5), Đội B(6), Ghi chú(7)
+      const tB   = String(r[6]||'').trim();
+      const sA   = r[4] !== '' && r[4] !== null ? Number(r[4]) : null;
+      const sB   = r[5] !== '' && r[5] !== null ? Number(r[5]) : null;
       if (!nd || !code) return;
-      newMatches.push({ noidung:nd, bang, code, teamA:tA, teamB:tB, key:`${nd}|${bang}|${code}` });
+      newMatches.push({ noidung:nd, bang, code, teamA:tA, teamB:tB,
+                        matchScoreA:sA, matchScoreB:sB, key:`${nd}|${bang}|${code}` });
     });
     matchList = newMatches;
     saveMatchList();
@@ -1171,7 +1175,7 @@ function confirmAdd() {
   if (!code||!tA||!tB) { toast('⚠️ Điền đủ Mã trận, Đội A, Đội B!'); return; }
   const key=`${nd}|${bang}|${code}`;
   if (matchList.find(x=>x.key===key)) { toast('⚠️ Trận đã tồn tại!'); return; }
-  matchList.push({noidung:nd, bang, code, teamA:tA, teamB:tB, key});
+  matchList.push({noidung:nd, bang, code, teamA:tA, teamB:tB, matchScoreA:null, matchScoreB:null, key});
   saveMatchList(); renderMatchGrid();
   closeModal('modal-add');
   toast(`✅ Đã thêm: ${nd} – ${bang} – ${code}`);
@@ -1303,13 +1307,15 @@ function renderMatchGrid() {
     const res    = S.results[m.key];
     const btn    = document.createElement('button');
     btn.className = 'match-btn' + (done ? ' done' : '') + (active ? ' active' : '');
+    const dispA = m.matchScoreA !== null && m.matchScoreA !== undefined ? m.matchScoreA : (res ? res.scoreA : null);
+    const dispB = m.matchScoreB !== null && m.matchScoreB !== undefined ? m.matchScoreB : (res ? res.scoreB : null);
+    const sTag  = (dispA !== null && dispB !== null) ? `<span class="ms-tag">${dispA}–${dispB}</span>` : '';
     btn.innerHTML =
       `<span class="mc">${m.code || '?'}</span>` +
       `<span style="font-size:10px;color:var(--g400)">${m.noidung || ''} ${m.bang ? '· '+m.bang : ''}</span><br>` +
       `<span style="font-size:11.5px">${sn(m.teamA)}</span>` +
       `<span style="color:var(--g400);font-size:10px"> vs </span>` +
-      `<span style="font-size:11.5px">${sn(m.teamB)}</span>` +
-      (res ? `<span class="ms-tag">${res.scoreA}–${res.scoreB}</span>` : '');
+      `<span style="font-size:11.5px">${sn(m.teamB)}</span>` + sTag;
     btn.onclick = () => loadMatch(idx);
     grid.appendChild(btn);
   });
