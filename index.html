@@ -1849,9 +1849,10 @@ async function pollMatches() {
   try {
     const data = await getFromGS('?action=matches');
     if (!data?.rows?.length) return;
-    const newCount = data.rows.length - 1;
-    if (newCount === _lastMatchCount) return; // không đổi → bỏ qua
 
+    const newCount = data.rows.length - 1;
+
+    // Parse data mới
     const newMatches = [];
     data.rows.slice(1).forEach(r => {
       const nd=String(r[0]||'').trim(), bang=String(r[1]||'').trim(), code=String(r[2]||'').trim();
@@ -1862,6 +1863,18 @@ async function pollMatches() {
       newMatches.push({noidung:nd,bang,code,teamA:tA,teamB:tB,matchScoreA:sA,matchScoreB:sB,key:`${nd}|${bang}|${code}`});
     });
 
+    // So sánh thông minh: check cả số lượng VÀ danh sách bảng/nội dung
+    const oldBangs = [...new Set(matchList.map(m=>m.bang).filter(Boolean))].join(',');
+    const newBangs = [...new Set(newMatches.map(m=>m.bang).filter(Boolean))].join(',');
+    const oldNDs   = [...new Set(matchList.map(m=>m.noidung).filter(Boolean))].join(',');
+    const newNDs   = [...new Set(newMatches.map(m=>m.noidung).filter(Boolean))].join(',');
+
+    const hasChange = newCount !== _lastMatchCount
+                   || oldBangs !== newBangs
+                   || oldNDs   !== newNDs;
+
+    if (!hasChange) return; // không có gì thay đổi → bỏ qua
+
     const added = newCount - _lastMatchCount;
     _lastMatchCount = newCount;
     matchList = newMatches;
@@ -1870,10 +1883,13 @@ async function pollMatches() {
     // syncDropdownsFromData đã gọi renderMatchGrid() bên trong
     syncDropdownsFromData(true);
 
+    // Thông báo phù hợp
     if (added > 0) {
       toast(`🔄 ${added} trận mới! Bảng đã cập nhật.`, 3000);
-      setDot('ok');
+    } else if (oldBangs !== newBangs) {
+      toast(`🔄 Bảng đấu đã cập nhật!`, 2500);
     }
+    setDot('ok');
   } catch(e) {}
 }
 
