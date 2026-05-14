@@ -1395,7 +1395,16 @@ function renderHistory() {
 
 function renderResults() {
   const body = document.getElementById('res-body');
-  const arr  = Object.values(S.results);
+  // Chỉ hiện kết quả của trận có xác nhận từ sheet Matches (matchScoreA/B != null)
+  // Lọc bỏ kết quả cũ của giải trước không còn trong Matches hoặc chưa có điểm
+  const allResults = Object.values(S.results);
+  const arr = allResults.filter(r => {
+    const match = matchList.find(m => m.code === r.code);
+    // Giữ nếu trận vẫn trong Matches VÀ Matches đã có điểm xác nhận
+    return match &&
+           match.matchScoreA !== null && match.matchScoreA !== undefined &&
+           match.matchScoreB !== null && match.matchScoreB !== undefined;
+  });
   document.getElementById('res-badge').textContent = arr.length;
   if (!arr.length) {
     body.innerHTML = '<tr><td colspan="11" class="empty-msg">Chưa có kết quả</td></tr>';
@@ -1689,8 +1698,23 @@ function loadMatch(idx) {
   // side: 'a' = Đội A gốc đang ở vị trí trái (card-a), 'b' = đang ở vị trí phải
   S.currentMatch.origSideA = 'a'; // ban đầu teamA gốc ở bên A (trái)
 
-  if (S.results[m.key]) { S.a=S.results[m.key].scoreA; S.b=S.results[m.key].scoreB; }
-  else { S.a=0; S.b=0; }
+  // Điểm: chỉ dùng S.results nếu sheet Matches đã xác nhận có kết quả (matchScoreA/B != null)
+  // Nếu Matches chưa có điểm → trận chưa chấm → bắt đầu từ 0 dù localStorage có dữ liệu cũ
+  const matchHasScore = (m.matchScoreA !== null && m.matchScoreA !== undefined &&
+                         m.matchScoreB !== null && m.matchScoreB !== undefined);
+  if (matchHasScore) {
+    // Matches đã có điểm → dùng điểm từ Matches (chính xác nhất)
+    S.a = m.matchScoreA;
+    S.b = m.matchScoreB;
+  } else {
+    // Matches chưa có điểm → trận mới chưa chấm → reset về 0
+    S.a = 0; S.b = 0;
+    // Xoá kết quả cũ trong localStorage để tránh hiện nhầm
+    if (S.results[m.key]) {
+      delete S.results[m.key];
+      try { localStorage.setItem('pb_res6', JSON.stringify(S.results)); } catch(e) {}
+    }
+  }
   S.game=1; S.server='a'; S.serveNum=1; S.history=[];
   swapNotified=false;
   document.getElementById('swap-notice').classList.remove('show');
