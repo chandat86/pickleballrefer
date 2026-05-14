@@ -1039,41 +1039,24 @@ async function loadAllFromGS() {
     matchList = newMatches;
     saveMatchList();
     gotMatches = true;
-
-    // Đồng bộ S.results: cập nhật tên đội theo Matches mới nhất
-    // Tránh hiển thị tên đội cũ khi giải mới thay tên
-    Object.keys(S.results).forEach(key => {
-      const match = matchList.find(m => m.key === key);
-      if (match) {
-        S.results[key].teamA = match.teamA;
-        S.results[key].teamB = match.teamB;
-        S.results[key].noidung = match.noidung;
-        S.results[key].bang = match.bang;
-      } else {
-        // Trận không còn trong Matches → xoá khỏi results cũ
-        delete S.results[key];
-      }
-    });
-    try { localStorage.setItem('pb_res6', JSON.stringify(S.results)); } catch(e){}
   }
 
-  // ── Xử lý Results từ KetQua: chỉ lấy thông tin thi đấu (điểm, sân, TT, quy tắc) ──
-  // Tên đội LUÔN lấy từ Matches, không lấy từ KetQua
+  // ── Xử lý Results từ KetQua ──
   let addedResults = 0;
   if (!_resultsCleared && resultData?.rows?.length > 1) {
     resultData.rows.slice(1).forEach(r => {
       if (!r[0] || !r[3]) return;
       const code = String(r[3]||'').trim();
       const match = matchList.find(m => m.code === code);
-      if (!match) return; // bỏ qua nếu trận không còn trong Matches
+      if (!match) return;
       if (!S.results[match.key]) {
         S.results[match.key] = {
           savedAt:  r[0],
-          noidung:  match.noidung,  // ← từ Matches (mới nhất)
-          bang:     match.bang,     // ← từ Matches
+          noidung:  String(r[1]||'').trim(),
+          bang:     String(r[2]||'').trim(),
           code,
-          teamA:    match.teamA,    // ← từ Matches (không dùng r[4])
-          teamB:    match.teamB,    // ← từ Matches (không dùng r[5])
+          teamA:    String(r[4]||'').trim(),
+          teamB:    String(r[5]||'').trim(),
           scoreA:   Number(r[6])||0,
           scoreB:   Number(r[7])||0,
           winner:   String(r[8]||'').trim(),
@@ -1377,14 +1360,15 @@ function renderMatchGrid() {
   grid.innerHTML = '';
   filtered.forEach(m => {
     const idx  = matchList.indexOf(m);
-    const done   = !!S.results[m.key];
+    const done   = (m.matchScoreA !== null && m.matchScoreA !== undefined);
     const active = S.currentMatch?.key === m.key;
-    const res    = S.results[m.key];
     const btn    = document.createElement('button');
     btn.className = 'match-btn' + (done ? ' done' : '') + (active ? ' active' : '');
-    const dispA = m.matchScoreA !== null && m.matchScoreA !== undefined ? m.matchScoreA : (res ? res.scoreA : null);
-    const dispB = m.matchScoreB !== null && m.matchScoreB !== undefined ? m.matchScoreB : (res ? res.scoreB : null);
-    const sTag  = (dispA !== null && dispB !== null) ? `<span class="ms-tag">${dispA}–${dispB}</span>` : '';
+    // Chỉ hiện tỉ số từ sheet Matches (matchScoreA/B) — nguồn sự thật duy nhất
+    // Không dùng S.results local để tránh hiện điểm giải cũ khi đổi tên đội
+    const sTag = (m.matchScoreA !== null && m.matchScoreA !== undefined &&
+                  m.matchScoreB !== null && m.matchScoreB !== undefined)
+      ? `<span class="ms-tag">${m.matchScoreA}–${m.matchScoreB}</span>` : '';
     btn.innerHTML =
       `<span class="mc">${m.code || '?'}</span>` +
       `<span style="font-size:10px;color:var(--g400)">${m.noidung || ''} ${m.bang ? '· '+m.bang : ''}</span><br>` +
@@ -1705,17 +1689,8 @@ function loadMatch(idx) {
   // side: 'a' = Đội A gốc đang ở vị trí trái (card-a), 'b' = đang ở vị trí phải
   S.currentMatch.origSideA = 'a'; // ban đầu teamA gốc ở bên A (trái)
 
-  // Điểm: ưu tiên từ Matches (matchScoreA/B), fallback sang S.results
-  if (m.matchScoreA !== null && m.matchScoreA !== undefined &&
-      m.matchScoreB !== null && m.matchScoreB !== undefined) {
-    S.a = m.matchScoreA;
-    S.b = m.matchScoreB;
-  } else if (S.results[m.key]) {
-    S.a = S.results[m.key].scoreA;
-    S.b = S.results[m.key].scoreB;
-  } else {
-    S.a = 0; S.b = 0;
-  }
+  if (S.results[m.key]) { S.a=S.results[m.key].scoreA; S.b=S.results[m.key].scoreB; }
+  else { S.a=0; S.b=0; }
   S.game=1; S.server='a'; S.serveNum=1; S.history=[];
   swapNotified=false;
   document.getElementById('swap-notice').classList.remove('show');
