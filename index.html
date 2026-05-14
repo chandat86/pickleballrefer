@@ -851,7 +851,9 @@ function startTimer(type, side) {
       teamBOrig,
       'Game '+S.game,
       RULES[winRule].label,
-      document.getElementById('inp-referee').value||''
+      eventLabel,                                    // Sự kiện
+      '',                                            // Đội thắng — trống
+      document.getElementById('inp-referee').value||'' // Trọng tài
     ]);
   }
 }
@@ -1424,6 +1426,8 @@ function addScore(side, delta) {
         teamBOrig,
         'Game '+S.game,
         RULES[winRule].label,
+        '',                                          // Sự kiện — trống (ghi điểm bình thường)
+        '',                                          // Đội thắng — trống
         document.getElementById('inp-referee').value||''
       ]);
     }
@@ -1493,6 +1497,8 @@ function pushLog(desc, snap) {
 }
 
 // Ghi log sự kiện lên GSheets (không phải ghi điểm)
+// Ghi log sự kiện lên GSheets (không phải ghi điểm)
+// Sự kiện: Đổi sân, Game tiếp, Kết quả...
 function logToGS(eventType, note) {
   if (!GS_URL || !S.currentMatch) return;
   const m = S.currentMatch;
@@ -1501,17 +1507,21 @@ function logToGS(eventType, note) {
   const teamBOrig = m.origTeamB || m.teamB;
   const scoreAOrig = origSideA === 'a' ? S.a : S.b;
   const scoreBOrig = origSideA === 'a' ? S.b : S.a;
+  // Sự kiện không ghi điểm: cột F và H để trống, ghi loại sự kiện vào cột Trọng tài (cuối)
+  const referee = document.getElementById('inp-referee').value || '';
   syncGS('log', [
     nowMs(), now(),
     m.noidung||'', m.bang||'', m.code,
     teamAOrig,
-    eventType,
-    `${scoreAOrig}–${scoreBOrig}`,
-    note||'',
+    '',                            // (+1) Đội A — trống
+    `${scoreAOrig}–${scoreBOrig}`, // Tỉ số hiện tại
+    '',                            // (+1) Đội B — trống
     teamBOrig,
     'Game '+S.game,
     RULES[winRule].label,
-    document.getElementById('inp-referee').value||''
+    eventType,                     // Sự kiện
+    '',                                // Đội thắng — trống
+    `${referee}${note?' · '+note:''}` // Trọng tài + ghi chú
   ]);
 }
 
@@ -1584,7 +1594,27 @@ function confirmSave() {
 
   // 4. Log + toast
   pushLog(`✅ LƯU: ${m.code} → ${scoreOrig_A}–${scoreOrig_B} (${sn(winner)} thắng)`, null);
-  logToGS(`✅ Kết quả: ${scoreOrig_A}–${scoreOrig_B}`, sn(winner)+' thắng');
+  // Ghi kết quả vào EventLog với đúng cột
+  if (GS_URL && S.currentMatch) {
+    const m2 = S.currentMatch;
+    const origSideA2 = m2.origSideA || 'a';
+    const teamAOrig2 = m2.origTeamA || m2.teamA;
+    const teamBOrig2 = m2.origTeamB || m2.teamB;
+    syncGS('log', [
+      nowMs(), now(),
+      m2.noidung||'', m2.bang||'', m2.code,
+      teamAOrig2,
+      '',                                          // (+1) Đội A — trống
+      `${scoreOrig_A}–${scoreOrig_B}`,             // Tỉ số cuối
+      '',                                          // (+1) Đội B — trống
+      teamBOrig2,
+      'Game '+S.game,
+      RULES[winRule].label,
+      '✅ Kết quả',                               // Sự kiện
+      `${sn(winner)}`,                             // Đội thắng
+      document.getElementById('inp-referee').value||'' // Trọng tài
+    ]);
+  }
   const winnerLabel = scoreOrig_A !== scoreOrig_B ? `🏆 ${sn(winner)} thắng` : '🤝 Hoà';
   toast(`💾 Đã lưu: ${m.code} · ${scoreOrig_A}–${scoreOrig_B} · ${winnerLabel}`, 4000);
 
